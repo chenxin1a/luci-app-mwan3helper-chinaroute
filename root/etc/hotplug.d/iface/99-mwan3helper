@@ -1,0 +1,18 @@
+#!/bin/sh
+    
+dev=$(uci get mwan3helper.config.dev 2>/dev/null)
+
+[ -z "$dev" ] && exit 0
+
+[ "$INTERFACE" = "$dev" ] || exit 0
+
+case "$ACTION" in
+    ifup)
+        logger -t mwan3helper "Interface $INTERFACE is UP, executing start..."
+        /etc/init.d/mwan3helper start
+        ;;
+    ifdown)
+        logger -t mwan3helper "Interface $INTERFACE is DOWN, executing stop..."
+        /etc/init.d/mwan3helper stop
+        ;;
+esac
