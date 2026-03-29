@@ -6,6 +6,79 @@ START=60
 USE_PROCD=1
 
 start_service(){
+
+  conf_iface=$(uci get mwan3helper.config.dev 2>/dev/null)
+
+  if [ -z "$conf_iface" ]; then
+      echo "Error: Logical interface name is not configured in the config file."
+      exit 1
+  fi
+
+  all_ubus_ifaces=$(ubus list network.interface.* | sed 's/network.interface.//g')
+
+  dev=""
+
+  for iface in $all_ubus_ifaces; do
+      if [ "$iface" = "$conf_iface" ]; then
+          status_json=$(ubus call network.interface."$iface" status 2>/dev/null)
+          dev=$(echo "$status_json" | jsonfilter -e '@.l3_device')
+          [ -z "$dev" ] && dev=$(echo "$status_json" | jsonfilter -e '@.device')
+          break
+      fi
+  done
+  if [ -z "$dev" ]; then
+      echo "Error: Logical interface [$conf_iface] not found in the running system or the interface is not up."
+      exit 1
+  fi
+
+  en=$(uci get mwan3helper.config.enabled 2>/dev/null)
+  dns=$(uci get mwan3helper.config.dns 2>/dev/null)
+  dnsen=$(uci get mwan3helper.config.dnsen 2>/dev/null)
+  mode=$(uci get mwan3helper.config.mode 2>/dev/null)
+  dnsserver=$(uci get mwan3helper.config.dnsserver 2>/dev/null)
+
+  timeout=60
+
+  echo "Checking for $dev (Timeout: 60s)..."
+
+  while [ $timeout -gt 0 ]; do
+    if ip link show "$dev" > /dev/null 2>&1; then
+      echo "Success: $dev is up. Applying rules."
+      break
+    fi
+    sleep 10
+    timeout=$((timeout - 10))
+  done
+
+  if ! ip link show "$dev" > /dev/null 2>&1; then
+    echo "Error: $dev not found after 60s. Skipping."
+    return 0
+  fi
+
+  en=$(uci get mwan3helper.config.enabled 2>/dev/null)
+  dns=$(uci get mwan3helper.config.dns 2>/dev/null)
+  dnsen=$(uci get mwan3helper.config.dnsen 2>/dev/null)
+  mode=$(uci get mwan3helper.config.mode 2>/dev/null)
+  dnsserver=$(uci get mwan3helper.config.dnsserver 2>/dev/null)
+
+  timeout=60
+    
+  echo "Checking for $dev (Timeout: 60s)..."
+    
+  while [ $timeout -gt 0 ]; do
+    if ip link show "$dev" > /dev/null 2>&1; then
+      echo "Success: $dev is up. Applying rules."
+      break
+    fi
+    sleep 10
+    timeout=$((timeout - 10))
+  done
+
+  if ! ip link show "$dev" > /dev/null 2>&1; then
+    echo "Error: $dev not found after 60s. Skipping."
+    return 0
+  fi
+
   /etc/mwan3helper/genipset.sh cn '/etc/mwan3helper/all_cn.txt'
   /etc/mwan3helper/genipset.sh ct '/etc/mwan3helper/chinatelecom.txt'
   /etc/mwan3helper/genipset.sh cnc '/etc/mwan3helper/unicom_cnc.txt'
@@ -14,12 +87,6 @@ start_service(){
   /etc/mwan3helper/genipset.sh cernet '/etc/mwan3helper/cernet.txt'
   /etc/mwan3helper/genipset.sh gwbn '/etc/mwan3helper/gwbn.txt'
   /etc/mwan3helper/genipset.sh othernet '/etc/mwan3helper/othernet.txt'
-  en=$(uci get mwan3helper.config.enabled 2>/dev/null)
-  dns=$(uci get mwan3helper.config.dns 2>/dev/null)
-  dev=$(uci get mwan3helper.config.dev 2>/dev/null)
-  dnsen=$(uci get mwan3helper.config.dnsen 2>/dev/null)
-  mode=$(uci get mwan3helper.config.mode 2>/dev/null)
-  dnsserver=$(uci get mwan3helper.config.dnsserver 2>/dev/null)
   if [ $en -eq 1 ];  then
     mkdir -p /tmp/etc/dnsmasq-mwan3.d
     ipset -N gfwlist hash:net 2>/dev/null
@@ -72,7 +139,6 @@ stop_service(){
     fi
     /etc/init.d/dnsmasq restart
     dns=$(uci get mwan3helper.config.dns 2>/dev/null)
-    dev=$(uci get mwan3helper.config.dev 2>/dev/null)
     ip route del default table 200
 
     ip rule del table 200 
@@ -81,6 +147,7 @@ stop_service(){
     iptables -t mangle -D PREROUTING -s $dns   -j MARK --set-mark 0
     iptables -t mangle -D PREROUTING -i br-lan  -m set --match-set gfwlist dst  -j MARK --set-mark 200
     iptables -t mangle -D OUTPUT -d $dnsserver -j MARK --set-mark 200
+    ipset destroy
     sed -i '/\/etc\/init.d\/mwan3helper start/d' /etc/firewall.user
     
 }
