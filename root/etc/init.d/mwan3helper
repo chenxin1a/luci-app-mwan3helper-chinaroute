@@ -48,7 +48,7 @@ start_service(){
     iptables -t mangle -A PREROUTING -i br-lan -m set --match-set cn dst -j RETURN
     iptables -t mangle -A PREROUTING -i br-lan -j MARK --set-mark 200
     fi
-    if [ $mode -eq 0 ];  then
+    if [ $mode -eq 1 ];  then
     iptables -t mangle -A PREROUTING -i br-lan -m set --match-set gfwlist dst  -j MARK --set-mark 200
     iptables -t mangle -A PREROUTING -s $dns   -j MARK --set-mark 0
     fi
