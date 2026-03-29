@@ -24,11 +24,14 @@ start_service(){
     mkdir -p /tmp/etc/dnsmasq-mwan3.d
     ipset -N gfwlist hash:net 2>/dev/null
     if [ $dnsen -eq 1 ];  then
-    awk '!/^$/&&!/^#/{printf("ipset=/.%s/'"gfwlist"'\n",$0)}' /etc/mwan3helper/gfw.txt > /tmp/etc/dnsmasq-mwan3.d/mwan3_gfwlist.conf
-    awk '!/^$/&&!/^#/{printf("server=/.%s/'"$dnsserver#53"'\n",$0)}' /etc/mwan3helper/gfw.txt >> /tmp/etc/dnsmasq-mwan3.d/mwan3_gfwlist.conf
-    cat > /tmp/dnsmasq.d/dnsmasq-mwan3.conf <<EOF
-conf-dir=/var/etc/dnsmasq-mwan3.d
-EOF
+      awk '!/^$/&&!/^#/{printf("ipset=/.%s/'"gfwlist"'\n",$0)}' /etc/mwan3helper/gfw.txt > /tmp/etc/dnsmasq-mwan3.d/mwan3_gfwlist.conf
+      awk '!/^$/&&!/^#/{printf("server=/.%s/'"$dnsserver#53"'\n",$0)}' /etc/mwan3helper/gfw.txt >> /tmp/etc/dnsmasq-mwan3.d/mwan3_gfwlist.conf
+      DNSMASQ_SECTION=$(uci show dhcp | grep "=dnsmasq" | head -n1 | cut -d'.' -f2 | cut -d'=' -f1)
+      if [ -n "$DNSMASQ_SECTION" ]; then
+        uci set dhcp."$DNSMASQ_SECTION".confdir="/var/etc/dnsmasq-mwan3.d"
+        uci commit dhcp
+      fi
+
     fi
     /etc/init.d/dnsmasq restart
     ip route del default table 200
@@ -36,16 +39,19 @@ EOF
     ip rule del table 200 
     ip rule add table 200 fwmark 200
     
+    iptables -t mangle -D PREROUTING -i br-lan -m set --match-set cn dst -j RETURN
     iptables -t mangle -D PREROUTING -i br-lan -j MARK --set-mark 200
-    iptables -t mangle -D PREROUTING -i br-lan -m set --match-set cn dst  -j MARK --set-mark 0
     iptables -t mangle -D PREROUTING -s $dns   -j MARK --set-mark 0
     iptables -t mangle -D PREROUTING -i br-lan  -m set --match-set gfwlist dst  -j MARK --set-mark 200
+    iptables -t mangle -A OUTPUT -d $dnsserver -j MARK --set-mark 200
     if [ $mode -eq 0 ];  then
+    iptables -t mangle -A PREROUTING -i br-lan -m set --match-set cn dst -j RETURN
     iptables -t mangle -A PREROUTING -i br-lan -j MARK --set-mark 200
-    iptables -t mangle -A PREROUTING -i br-lan -m set --match-set cn dst  -j MARK --set-mark 0
     fi
+    if [ $mode -eq 0 ];  then
     iptables -t mangle -A PREROUTING -i br-lan -m set --match-set gfwlist dst  -j MARK --set-mark 200
     iptables -t mangle -A PREROUTING -s $dns   -j MARK --set-mark 0
+    fi
     sed -i '/\/etc\/init.d\/mwan3helper start/d' /etc/firewall.user
     echo "/etc/init.d/mwan3helper start" >> /etc/firewall.user
     ipset add gfwlist 91.108.4.0/22
@@ -59,16 +65,22 @@ EOF
 
 stop_service(){
 	rm -f /tmp/dnsmasq.d/dnsmasq-mwan3.conf
+    DNSMASQ_SECTION=$(uci show dhcp | grep "=dnsmasq" | head -n1 | cut -d'.' -f2 | cut -d'=' -f1)
+    if [ -n "$DNSMASQ_SECTION" ]; then
+      uci delete dhcp."$DNSMASQ_SECTION".confdir="/var/etc/dnsmasq-mwan3.d"
+      uci commit dhcp
+    fi
     /etc/init.d/dnsmasq restart
     dns=$(uci get mwan3helper.config.dns 2>/dev/null)
     dev=$(uci get mwan3helper.config.dev 2>/dev/null)
     ip route del default table 200
 
     ip rule del table 200 
-     iptables -t mangle -D PREROUTING -i br-lan -j MARK --set-mark 200
-    iptables -t mangle -D PREROUTING -i br-lan -m set --match-set cn dst  -j MARK --set-mark 0
+    iptables -t mangle -D PREROUTING -i br-lan -m set --match-set cn dst -j RETURN
+    iptables -t mangle -D PREROUTING -i br-lan -j MARK --set-mark 200
     iptables -t mangle -D PREROUTING -s $dns   -j MARK --set-mark 0
     iptables -t mangle -D PREROUTING -i br-lan  -m set --match-set gfwlist dst  -j MARK --set-mark 200
+    iptables -t mangle -D OUTPUT -d $dnsserver -j MARK --set-mark 200
     sed -i '/\/etc\/init.d\/mwan3helper start/d' /etc/firewall.user
     
 }
