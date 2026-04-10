@@ -139,6 +139,7 @@ stop_service(){
     fi
     /etc/init.d/dnsmasq restart
     dns=$(uci get mwan3helper.config.dns 2>/dev/null)
+    dnsserver=$(uci get mwan3helper.config.dnsserver 2>/dev/null)
     ip route del default table 200
 
     ip rule del table 200 
