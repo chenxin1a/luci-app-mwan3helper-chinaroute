@@ -1,0 +1,36 @@
+<div class="cbi-value">
+    <label class="cbi-value-title"><%:删除域名%></label>
+    <div class="cbi-value-field">
+        <textarea id="delete_domains" name="cbid.mwan3helper.1._delete_domains" rows="5" placeholder="一行一个，如&#10;example.com&#10;test.com" style="width: 300px;"></textarea>
+        <input type="hidden" name="cbid.mwan3helper.1._do_delete" id="do_delete" value="0" />
+        <br/>
+        <input type="button" class="btn" value="<%:删除%>" onclick="deleteDomains()" />
+    </div>
+</div>
+<div class="cbi-value" id="delete_msg" style="display:none;">
+    <div class="cbi-value-field">
+        <span id="delete_msg_text" style="color:green;"></span>
+    </div>
+</div>
+
+<script type="text/javascript">
+function deleteDomains() {
+    var domains = document.getElementById('delete_domains').value.trim();
+    if (domains === '') {
+        alert('<%:请输入要删除的域名%>');
+        return;
+    }
+
+    var lines = domains.split('\n').filter(function(l) { return l.trim() !== ''; });
+    if (lines.length === 0) {
+        alert('<%:请输入有效的域名%>');
+        return;
+    }
+
+    document.getElementById('do_delete').value = '1';
+    var form = document.querySelector('form');
+    if (form) {
+        form.submit();
+    }
+}
+</script>

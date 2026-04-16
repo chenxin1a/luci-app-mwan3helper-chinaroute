@@ -1,0 +1,42 @@
+<div class="cbi-value cbi-value-action">
+    <input type="button" class="btn cbi-button cbi-button-apply" value="<%:重启mwan3helper服务%>" onclick="restartService()" />
+    <span id="restart_msg" style="margin-left:10px;"></span>
+</div>
+
+<script type="text/javascript">
+function restartService() {
+    var btn = document.querySelector('input[onclick="restartService()"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.value = '<%:正在重启...%>';
+    }
+    document.getElementById('restart_msg').textContent = '<%:正在重启服务，请稍候...%>';
+    document.getElementById('restart_msg').style.color = '#0066cc';
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '<%=luci.dispatcher.build_url("admin/services/mwan3helper/restart")%>', true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onload = function() {
+        if (btn) {
+            btn.disabled = false;
+            btn.value = '<%:重启mwan3helper服务%>';
+        }
+        if (xhr.status === 200) {
+            document.getElementById('restart_msg').textContent = '<%:服务已重启成功%>';
+            document.getElementById('restart_msg').style.color = 'green';
+        } else {
+            document.getElementById('restart_msg').textContent = '<%:重启失败，请检查服务状态%>';
+            document.getElementById('restart_msg').style.color = 'red';
+        }
+    };
+    xhr.onerror = function() {
+        if (btn) {
+            btn.disabled = false;
+            btn.value = '<%:重启mwan3helper服务%>';
+        }
+        document.getElementById('restart_msg').textContent = '<%:重启失败，请检查服务状态%>';
+        document.getElementById('restart_msg').style.color = 'red';
+    };
+    xhr.send();
+}
+</script>

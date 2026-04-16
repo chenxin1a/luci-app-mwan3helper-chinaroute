@@ -1,0 +1,44 @@
+<div class="cbi-value">
+    <label class="cbi-value-title"><%:添加域名%></label>
+    <div class="cbi-value-field">
+        <input type="text" id="add_domain" name="cbid.mwan3helper.1._add_domain" placeholder="输入域名，如 example.com" style="width: 300px;" />
+        <input type="hidden" name="cbid.mwan3helper.1._do_add" id="do_add" value="0" />
+        <input type="button" class="btn" value="<%:添加%>" onclick="addDomain()" />
+    </div>
+</div>
+<div class="cbi-value" id="add_msg" style="display:none;">
+    <div class="cbi-value-field">
+        <span id="add_msg_text" style="color:green;"></span>
+    </div>
+</div>
+
+<script type="text/javascript">
+function addDomain() {
+    var domain = document.getElementById('add_domain').value.trim();
+    if (domain === '') {
+        alert('<%:请输入域名%>');
+        return;
+    }
+
+    var ruleList = document.querySelector('textarea[name="cbid.mwan3helper.1.rule_list"]');
+    if (ruleList) {
+        var lines = ruleList.value.split('\n');
+        for (var i = 0; i < lines.length; i++) {
+            if (lines[i].trim() === domain) {
+                var msgDiv = document.getElementById('add_msg');
+                var msgText = document.getElementById('add_msg_text');
+                msgDiv.style.display = 'block';
+                msgText.style.color = 'red';
+                msgText.textContent = '<%:该域名已存在%>';
+                return;
+            }
+        }
+    }
+
+    document.getElementById('do_add').value = '1';
+    var form = document.querySelector('form');
+    if (form) {
+        form.submit();
+    }
+}
+</script>
