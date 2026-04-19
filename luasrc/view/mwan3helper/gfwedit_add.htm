@@ -1,44 +1,72 @@
 <div class="cbi-value">
     <label class="cbi-value-title"><%:添加域名%></label>
     <div class="cbi-value-field">
-        <input type="text" id="add_domain" name="cbid.mwan3helper.1._add_domain" placeholder="输入域名，如 example.com" style="width: 300px;" />
-        <input type="hidden" name="cbid.mwan3helper.1._do_add" id="do_add" value="0" />
-        <input type="button" class="btn" value="<%:添加%>" onclick="addDomain()" />
+        <textarea id="add_domain" rows="5" placeholder="一行一个域名，如&#10;example.com&#10;test.com" style="width: 300px;"></textarea>
+        <br/>
+        <input type="button" class="btn cbi-button cbi-button-add" value="<%:添加%>" onclick="addDomain(); return false;" />
     </div>
 </div>
-<div class="cbi-value" id="add_msg" style="display:none;">
+<div class="cbi-value" id="add_msg">
     <div class="cbi-value-field">
-        <span id="add_msg_text" style="color:green;"></span>
+        <span id="add_msg_text"></span>
     </div>
 </div>
 
 <script type="text/javascript">
+//<![CDATA[
 function addDomain() {
     var domain = document.getElementById('add_domain').value.trim();
+    var msgText = document.getElementById('add_msg_text');
+    
     if (domain === '') {
-        alert('<%:请输入域名%>');
-        return;
+        msgText.style.color = 'red';
+        msgText.textContent = '<%:请输入域名%>';
+        return false;
     }
 
-    var ruleList = document.querySelector('textarea[name="cbid.mwan3helper.1.rule_list"]');
-    if (ruleList) {
-        var lines = ruleList.value.split('\n');
-        for (var i = 0; i < lines.length; i++) {
-            if (lines[i].trim() === domain) {
-                var msgDiv = document.getElementById('add_msg');
-                var msgText = document.getElementById('add_msg_text');
-                msgDiv.style.display = 'block';
+    var btn = document.querySelector('input[onclick="addDomain(); return false;"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.value = '<%:处理中...%>';
+    }
+
+    XHR.post('<%=luci.dispatcher.build_url("admin/services/mwan3helper/add_domain")%>', 
+        {domain: domain},
+        function(x, json)
+        {
+            if (btn) {
+                btn.disabled = false;
+                btn.value = '<%:添加%>';
+            }
+            
+            if (json) {
+                if (json.status === 'ok') {
+                    msgText.style.color = 'green';
+                    var msg = '<%:添加成功，请重启服务使更改生效%>';
+                    if (json.added) {
+                        msg = '<%:成功添加%> ' + json.added + ' <%:个域名%>';
+                        if (json.exists && json.exists > 0) {
+                            msg += '，<%:其中%> ' + json.exists + ' <%:个已存在%>';
+                        }
+                        msg += '，<%:请重启服务使更改生效%>';
+                    }
+                    msgText.textContent = msg;
+                    document.getElementById('add_domain').value = '';
+                    setTimeout(function() { location.reload(); }, 3000);
+                } else if (json.status === 'exists') {
+                    msgText.style.color = 'red';
+                    msgText.textContent = json.msg || '<%:所有域名均已存在%>';
+                } else {
+                    msgText.style.color = 'red';
+                    msgText.textContent = json.msg || '<%:操作失败%>';
+                }
+            } else {
                 msgText.style.color = 'red';
-                msgText.textContent = '<%:该域名已存在%>';
-                return;
+                msgText.textContent = '<%:请求失败%>';
             }
         }
-    }
-
-    document.getElementById('do_add').value = '1';
-    var form = document.querySelector('form');
-    if (form) {
-        form.submit();
-    }
+    );
+    return false;
 }
+//]]>
 </script>

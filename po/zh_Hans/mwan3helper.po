@@ -73,3 +73,39 @@ msgstr "服务已重启成功"
 
 msgid "重启失败，请检查服务状态"
 msgstr "重启失败，请检查服务状态"
+
+msgid "处理中..."
+msgstr "处理中..."
+
+msgid "添加成功，请重启服务使更改生效"
+msgstr "添加成功，请重启服务使更改生效"
+
+msgid "操作失败"
+msgstr "操作失败"
+
+msgid "请求失败"
+msgstr "请求失败"
+
+msgid "已删除"
+msgstr "已删除"
+
+msgid "条记录，请重启服务使更改生效"
+msgstr "条记录，请重启服务使更改生效"
+
+msgid "成功添加"
+msgstr "成功添加"
+
+msgid "个域名"
+msgstr "个域名"
+
+msgid "其中"
+msgstr "其中"
+
+msgid "个已存在"
+msgstr "个已存在"
+
+msgid "请重启服务使更改生效"
+msgstr "请重启服务使更改生效"
+
+msgid "所有域名均已存在"
+msgstr "所有域名均已存在"
